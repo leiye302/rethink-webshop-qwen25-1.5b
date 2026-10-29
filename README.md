@@ -32,8 +32,10 @@ shared-data adaptation, not claimed1.5B on-policy collection.
 ## Install and prepare (Linux x86-64)
 
 Prerequisites: Git, Conda, Python3.10/3.12 and a CUDA12.8-compatible driver/toolkit.
-Use only GPUs actually allocated to the job. Native stage2 preserves the public
-**2-GPU / TP2** topology; this is not a new single-24GB memory-fit claim.
+Use only GPUs actually allocated to the job. Both training stages target
+**one node with 4×A100 80GB**: SFT uses four DDP ranks with2 samples/rank/update
+(global8); stage2 uses FSDP4 and **TP2×DP2** rollout. This is not a single-24GB
+memory-fit claim. Offline evaluation still uses one GPU.
 
 ```bash
 git clone https://github.com/leiye302/rethink-webshop-qwen25-1.5b
@@ -71,7 +73,7 @@ and hash checked. Setup does not start paid API calls or training.
 ## Stage1: SFT from1.5B base
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 bash scripts/train_sft.sh
+CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_sft.sh
 ```
 
 The script first checks sampler/tokenization, native AdamW numerical parity and
@@ -82,8 +84,9 @@ directly `<RETHINK>` or `<action>`; H/R targets are masked, natural separator
 and joint tokenization must match. No merged `><` boundary is silently accepted.
 
 Resume only the same complete run with
-`CUDA_VISIBLE_DEVICES=0 bash scripts/train_sft.sh --resume runs/sft/checkpoint_000750`.
-The recipe rejects different code, parent, data, batch order or optimizer state.
+`CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_sft.sh --resume runs/sft/checkpoint_000750`.
+The recipe rejects different code, parent, data, batch order, world size or
+optimizer state. Each SFT checkpoint stores the four per-rank RNG states.
 Both750/1500 full checkpoints require room for weights plus FP32 AdamW states;
 see [storage notes](docs/REPRODUCING.md).
 
@@ -94,7 +97,7 @@ export HINT_API_BASE="https://your-provider.example/v1"
 export HINT_MODEL="your-text-model-id"
 read -rsp 'Hint API key: ' HINT_API_KEY; echo
 export HINT_API_KEY
-CUDA_VISIBLE_DEVICES=0,1 bash scripts/train_opsd.sh --allow-api-cost
+CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_opsd.sh --allow-api-cost
 ```
 
 Default Actor is **`runs/sft/checkpoint_001500/model`**. API provider/model must
@@ -114,7 +117,7 @@ resume the same native run. Do not reuse an output directory for a different arm
 
 ```bash
 # Same public GRPO+OPSD beta5 from1.5B base, no local hint API:
-CUDA_VISIBLE_DEVICES=0,1 bash scripts/train_opsd.sh --baseline --run-dir runs/baseline
+CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_opsd.sh --baseline --run-dir runs/baseline
 # Offline greedy native benchmark, never using hints:
 CUDA_VISIBLE_DEVICES=0 bash scripts/eval.sh --model assets/base --output runs/eval_base
 CUDA_VISIBLE_DEVICES=0 bash scripts/eval.sh --model runs/sft/checkpoint_001500/model --output runs/eval_sft1500
