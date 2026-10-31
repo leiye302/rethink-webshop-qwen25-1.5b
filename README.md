@@ -1,5 +1,8 @@
 # RETHINK WebShop — Qwen2.5-1.5B, from base
 
+> Shared cross-method evaluation: [exact common140 tasks and unchanged sampling](docs/SHARED_EVALUATION140.md).
+
+
 An independently runnable **base → Route-SFT → GRPO+OPSD** recipe.
 Start from public `Qwen/Qwen2.5-1.5B-Instruct`, train the **same frozen WebShop
 SFT samples** as the [3B companion](https://github.com/leiye302/rethink-webshop-qwen25-3b),
@@ -120,22 +123,24 @@ resume the same native run. Do not reuse an output directory for a different arm
 ```bash
 # Same public GRPO+OPSD beta5 from1.5B base, no local hint API:
 CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_opsd.sh --baseline --run-dir runs/baseline
-# Offline greedy native benchmark, never using hints:
-CUDA_VISIBLE_DEVICES=0 bash scripts/eval.sh --model assets/base --output runs/eval_base
-CUDA_VISIBLE_DEVICES=0 bash scripts/eval.sh --model runs/sft/checkpoint_001500/model --output runs/eval_sft1500
+# Formal native shared140 benchmark, temperature0.4, never using hints:
+CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/eval.sh --model assets/base --output runs/eval_base
+CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/eval.sh --model runs/sft/checkpoint_001500/model --output runs/eval_sft1500
 ```
 
-Online RL validation uses native sampling/temperature.4; offline SFT evaluation
-is greedy. Both use the exact same128 goal IDs/seed0 across arms/sizes. Do not
-equate numbers from different decoding protocols. Native success means terminal
-score1. Report mean score, reasoning/protocol rates and marker-bearing active
-decisions/all active decisions, not marker fraction of all tokens. Source
-Good/Bad groups do not label newly generated reasoning automatically.
+Formal evaluation and RL validation use the same shared140 native protocol:
+temperature0.4, sampling, top-p1, unrestricted top-k, one rollout/task,
+history2, prompt4096, response512 and15 environment steps. No hint API is used
+at evaluation. The200-H greedy generation probe is a separate SFT diagnostic.
+Old128/greedy scores are not relabeled. See the exact shared contract above.
+Report native success and mean raw task score separately. Marker rate counts
+marker-bearing active decisions, not a fraction of generated tokens. Source
+Good/Bad groups are not labels for freshly generated reasoning.
 
 ## Details and validation boundaries
 
 - [Method, source data, masks and exact objectives](docs/METHOD.md)
-- [Only3 patched upstream files and named configuration changes](docs/UPSTREAM_DIFF.md)
+- [Four minimally patched upstream files and named configuration changes](docs/UPSTREAM_DIFF.md)
 - [Resources, environment, recovery, API safety and evaluation](docs/REPRODUCING.md)
 - [Executed checks / unverified GPU work](docs/VERIFICATION.md)
 - [Data](data/README.md), [third-party/model terms](THIRD_PARTY.md)
