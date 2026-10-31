@@ -42,14 +42,14 @@ git clone https://github.com/leiye302/rethink-webshop-qwen25-1.5b
 cd rethink-webshop-qwen25-1.5b
 conda create -y -p "$PWD/.venv-opsd" -c conda-forge python=3.10 openjdk=11
 conda activate "$PWD/.venv-opsd"
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r configs/requirements-opsd.txt
+python -m pip install --upgrade pip setuptools wheel packaging==25.0
+python scripts/install_opsd.py
 python -m pip install --no-build-isolation flash-attn==2.8.3
 mkdir -p assets
 export PYTHONPATH="$PWD/src:$PWD/.deps/sdar"
 python -m rethink_webshop.java --prepare
 python -m rethink_webshop.setup --framework --data
-python -m pip install -e .deps/sdar -c configs/requirements-opsd.txt
+python -m pip install --no-deps -e .deps/sdar
 python -m pip check
 export JAVA_HOME="$PWD/assets/java"
 export JVM_PATH="$JAVA_HOME/lib/server/libjvm.so"
@@ -94,23 +94,25 @@ see [storage notes](docs/REPRODUCING.md).
 
 ```bash
 export HINT_API_BASE="https://your-provider.example/v1"
-export HINT_MODEL="your-text-model-id"
+export HINT_MODEL="glm-5.3-flash"
 read -rsp 'Hint API key: ' HINT_API_KEY; echo
 export HINT_API_KEY
 CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_opsd.sh --allow-api-cost
 ```
 
-Default Actor is **`runs/sft/checkpoint_001500/model`**. API provider/model must
-be selected explicitly; no expensive model/key is embedded. One episode request
+Default Actor is **`runs/sft/checkpoint_001500/model`**. Configure your API provider
+and key; the model is fixed to final-ALFWorld `glm-5.3-flash`. One episode request
 groups Actor-triggered steps; the API does not judge routes. Hints only augment
 Teacher context. Student responses, actions, rewards, GRPO participation and
 native confidence gate remain unchanged. Teacher uses current Actor weights,
 not a frozen initial model. The native stage2 reference-policy KL remains.01;
 this is separate from the absent SFT reference KL.
 
-Failed API requests/invalid hints/illegal actions/context overflow fall back to
-ordinary static-skill Teacher with explicit coverage counters. Requests are
-bounded; a missing hint cannot hold training forever. Add `--resume` only to
+The final ALFWorld model/protocol is pinned to `glm-5.3-flash`. Invalid returned
+hints/illegal commands fall back to static-skill Teacher with coverage counters.
+Transport/auth/quota failures retain the same batch and wait; truncated Teacher
+hints fail visibly. See [the exact alignment](docs/ALFWORLD_ALIGNMENT.md).
+Add `--resume` only to
 resume the same native run. Do not reuse an output directory for a different arm.
 
 ## Baseline and evaluation
