@@ -2,6 +2,10 @@
 
 > Shared cross-method evaluation: [exact common140 tasks and unchanged sampling](docs/SHARED_EVALUATION140.md).
 
+> Additional SFT database: [purchase-supplement buy-v9 and selection commands](docs/DATA_BUY_V9.md).
+> It is versioned separately; select it before data preparation. The original
+> default database, existing descriptions and model resources below are preserved.
+
 
 An independently runnable **base → Route-SFT → GRPO+OPSD** recipe.
 Start from public `Qwen/Qwen2.5-1.5B-Instruct`, train the **same frozen WebShop
