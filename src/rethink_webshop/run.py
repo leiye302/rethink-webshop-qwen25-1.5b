@@ -159,9 +159,12 @@ def main(argv=None):
             json.dump({'base':os.environ['HINT_API_BASE'],'model':os.environ['HINT_MODEL'],'key':os.environ.pop('HINT_API_KEY')},f)
         os.chmod(private,0o600)
         os.environ['RETHINK_HINT_AUTH']=str(private)
-        from .hint_api import auth
+        from .hint_api import auth, trust_environment_proxy
         auth()  # Validate without a paid request.
+        proxy_mode=trust_environment_proxy()
         OmegaConf.update(cfg,'ray_init.runtime_env.env_vars.RETHINK_HINT_AUTH',str(private),force_add=True)
+        OmegaConf.update(cfg,'ray_init.runtime_env.env_vars.RETHINK_HINT_TRUST_ENV',
+                         'true' if proxy_mode else 'false',force_add=True)
     cfg.trainer.resume_mode='resume_path' if a.resume else 'disable'
     if a.resume:
         cfg.trainer.resume_from_path=str(resume_checkpoint(output))

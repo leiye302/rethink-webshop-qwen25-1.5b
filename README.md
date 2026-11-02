@@ -113,10 +113,26 @@ this is separate from the absent SFT reference KL.
 
 The final ALFWorld model/protocol is pinned to `glm-5.3-flash`. Invalid returned
 hints/illegal commands fall back to static-skill Teacher with coverage counters.
-Transport/auth/quota failures retain the same batch and wait; truncated Teacher
-hints fail visibly. See [the exact alignment](docs/ALFWORLD_ALIGNMENT.md).
+Transient transport/quota failures retain the same batch and wait. Permanent
+configuration/auth and local disk errors stop visibly without an Actor update or
+repeat billing; truncated Teacher hints fail visibly. See
+[the exact alignment](docs/ALFWORLD_ALIGNMENT.md).
 Add `--resume` only to
 resume the same native run. Do not reuse an output directory for a different arm.
+
+Before allocating GPUs, check the configured API and writable cache with no model
+or SDAR installation required:
+
+```bash
+PYTHONPATH="$PWD/src" python -m rethink_webshop.hint_api --check
+# Explicit opt-in: one fresh synthetic request through the training transport/parser.
+PYTHONPATH="$PWD/src" python -m rethink_webshop.hint_api --check --allow-api-cost
+```
+
+The first command makes no network request. Neither command trains or uses CUDA.
+Do not put keys in command arguments. Proxy use is unchanged by default; opt out
+only if appropriate for your network with `RETHINK_HINT_TRUST_ENV=false`.
+See [API diagnosis, failure handling and update/resume boundaries](docs/API_TROUBLESHOOTING.md).
 
 ## Baseline and evaluation
 

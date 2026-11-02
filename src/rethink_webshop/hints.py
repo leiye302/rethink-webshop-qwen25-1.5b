@@ -1,10 +1,11 @@
 """Small SDAR hooks. Route selection is ONLY generated marker token IDs."""
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 import json
+from pathlib import Path
 import re
 import time
 from .common import ROOT, atomic_json
-from .hint_api import fetch, HintAPIHold
+from .hint_api import fetch, HintAPIHold, HintAPIFatal
 
 HINT_BEGIN='[Actor-triggered local hint]'
 HINT_END='[End local hint]'
@@ -61,28 +62,57 @@ def collect_hints(batch,cache,timeout=120,retries=5,workers=4):
         if triggered:
             groups.setdefault(str(raw),json.loads(str(raw)))
         mapping.append((str(raw),int(step),bool(triggered)))
-    def one(item):
-        raw,episode=item
-        try:
-            return raw,fetch(episode,cache,timeout=timeout,retries=retries)
-        except HintAPIHold:
-            raise
-    while True:
-        try:
-            with ThreadPoolExecutor(max_workers=workers) as pool:
-                results=dict(pool.map(one,groups.items()))
-            status=__import__('pathlib').Path(cache)/'api_wait_status.json'
-            if status.exists():
-                atomic_json(status,{'status':'ready','time':time.time()})
-            break
-        except HintAPIHold as exc:
-            delay=60 if exc.temporary else 300
-            atomic_json(__import__('pathlib').Path(cache)/'api_wait_status.json',
-                        {'status':'waiting_retry' if exc.temporary else 'waiting_quota_or_auth',
-                         'reason':exc.reason,'retry_after_s':delay,'time':time.time(),
-                         'same_batch_retained':True,'actor_updated':False})
-            print('[RETHINK] API waiting; same batch retained, no Actor update',flush=True)
+    if workers<=0:
+        raise HintAPIFatal('api_invalid_worker_count',{'stage':'configuration'})
+    results={};started=time.perf_counter()
+    def status(state,**details):
+        value={'status':state,'time':time.time(),
+               'elapsed_seconds':round(time.perf_counter()-started,3),
+               'episode_count':len(groups),'completed_episodes':len(results),
+               'same_batch_retained':True,'actor_updated':False,**details}
+        print('[RETHINK API batch] '+json.dumps(value,sort_keys=True),flush=True)
+        try:atomic_json(Path(cache)/'api_wait_status.json',value)
+        except OSError:
+            raise HintAPIFatal('api_status_write_error',{'stage':'cache_write','actor_updated':False}) from None
+    while len(results)<len(groups):
+        # A writable status/cache directory is checked BEFORE issuing requests.
+        # Successful episodes survive another episode's retry in memory as well
+        # as on disk; neither cached hints nor the rollout are regenerated.
+        status('requesting')
+        failure=None
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            pending={pool.submit(fetch,episode,cache,timeout=timeout,retries=retries):raw
+                     for raw,episode in groups.items() if raw not in results}
+            try:
+                while pending:
+                    done,_=wait(pending,timeout=30,return_when=FIRST_COMPLETED)
+                    if not done:
+                        status('waiting_inflight' if failure else 'waiting_requests',
+                               pending_episodes=len(pending),
+                               reason=failure.reason if failure else None)
+                    for future in done:
+                        raw=pending.pop(future)
+                        try:results[raw]=future.result()
+                        except HintAPIHold as exc:
+                            if failure is None or exc.fatal:failure=exc
+                            status('failed' if exc.fatal else 'waiting_inflight',
+                                   reason=exc.reason,fatal=exc.fatal,diagnostics=exc.diagnostics,
+                                   pending_episodes=len(pending))
+                            # Cancel queued work, but join already-running HTTP
+                            # requests; never leave a second pool in the background.
+                            for other in list(pending):
+                                if other.cancel():pending.pop(other)
+            finally:
+                for future in pending:future.cancel()
+        if failure is not None:
+            if failure.fatal:
+                status('failed',reason=failure.reason,fatal=True,diagnostics=failure.diagnostics)
+                raise failure from None
+            delay=60 if failure.temporary else 300
+            status('waiting_retry' if failure.temporary else 'waiting_quota_or_auth',
+                   reason=failure.reason,diagnostics=failure.diagnostics,retry_after_s=delay)
             time.sleep(delay)
+    if groups:status('ready')
     hints=[];reasons=[]
     for raw,step,triggered in mapping:
         if not triggered:

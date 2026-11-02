@@ -16,6 +16,12 @@ batch builder, static skills, WebShop prompt/memory/parser and score/reward are
 byte-hash locked and unchanged. The source verifier rejects additional tracked
 changes and checks reverse application of the patch.
 
+The API resilience update touches only that wrapper's transport/batch waiting,
+explicit proxy forwarding and diagnostics. Permanent configuration/local-I/O
+errors fail visibly; transient outages retain the same batch. The public SDAR
+patch and source locks, API model/body/parser, all SFT/RL loss and recipe values,
+and shared140 manifests are unchanged. See `API_TROUBLESHOOTING.md`.
+
 Configuration changes versus `examples/grpo_opsd_trainer/run_webshop_3b.sh`:
 
 - beta0 → **5**, for both baseline/method (OPSD coefficient remains .01).

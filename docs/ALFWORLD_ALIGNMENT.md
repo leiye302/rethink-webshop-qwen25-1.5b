@@ -35,10 +35,16 @@ to the final ALFWorld release, including its existing WebShop adapter.
   identical hint length and boundary checks. Only the pinned GLM generation path.
 
 A completed but malformed hint falls back to the ordinary static-skill Teacher.
-Transport/auth/quota failure instead retains the SAME rollout/pre-update Actor
-and waits to retry; it does not silently train without the intervention.
-Six bounded HTTP attempts precede a retained-batch wait (60s transient,
-300s auth/quota/request hold), as in ALFWorld final. Successful calls are cached.
+Transient transport/quota failure instead retains the SAME rollout/pre-update
+Actor and waits to retry; it does not silently train without the intervention.
+Six HTTP attempts precede a retained-batch wait (60s transient). Successful calls
+are cached. The transport-only hardening stops permanent HTTP/configuration,
+certificate and cache I/O errors visibly instead of waiting indefinitely or
+mistaking local disk failures for network failures. It emits redacted stage and
+progress information, and cancels queued work before joining in-flight requests.
+HTTP timeouts are not a batch-wide wall-clock deadline. See
+[`API_TROUBLESHOOTING.md`](API_TROUBLESHOOTING.md). No request body, hint parser,
+target, Teacher information flow, loss, training or evaluation setting changes.
 A hint cut by the native Teacher context budget is a visible error, not a
 silently discarded or falsely counted hint.
 

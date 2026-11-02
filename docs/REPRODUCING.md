@@ -107,13 +107,21 @@ may remove the remaining private file. Never publish `runs/`, `.env` or API logs
 Transport uses bounded HTTP/1.1 requests and controlled error codes; HTTP bodies
 and secret-bearing exception strings are not printed.
 
-The final ALFWorld protocol distinguishes failures: unavailable credit/auth or
-transport errors retain the same batch and wait; invalid returned content,
+The final ALFWorld protocol distinguishes failures: transient quota/transport
+errors retain the same batch and wait; permanent HTTP/configuration/certificate
+and local disk errors stop visibly without an Actor update. Invalid returned content,
 missing/duplicate step IDs or illegal commands use static-skill Teacher fallback.
 A local hint cut by the native prompt budget fails visibly. A high
 fallback rate means the **local-hint intervention is poorly applied**, not a
 successful hint-quality result; report coverage and investigate separately.
 Syntactic legality is not proof of semantically helpful hints.
+
+The transport-only hardening keeps the six-attempt/120-second socket settings
+and 60-second transient batch wait. It adds a standalone no-GPU API check,
+redacted open/read/decode/cache diagnostics, explicit optional proxy control,
+and cache-I/O separation. See `API_TROUBLESHOOTING.md`. An old run's launch identity
+binds the previous hint source hashes: updating this code does not authorize
+bypassing that guard or overwriting a running experiment.
 
 ## Native evaluation and metrics
 

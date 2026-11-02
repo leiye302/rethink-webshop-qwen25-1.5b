@@ -1,5 +1,30 @@
 # Publication verification
 
+## API resilience checks (2026-11-02)
+
+Both model-size trees passed **86 CPU tests with one Windows-only platform skip**,
+including24 transport resilience cases. Tests reproduce a successful HTTP response
+followed by cache-write failure (one request, no repeat billing), permanent HTTP
+failure without an outer infinite retry, redacted open/read/DNS/TLS diagnostics,
+unchanged transient retry budget, proxy modes, successful-episode reuse and
+batch heartbeats. Linux CI additionally runs the real four-process Gloo test.
+
+The standalone no-GPU CLI completed real `glm-5.3-flash` probes for both sizes.
+One1.5B probe first exposed a real `remote_disconnected` during `open`; it failed
+clearly and a fresh retry succeeded. A separate real production-collector smoke
+used4 synthetic episodes/47 decisions and27 Actor-selected fixture targets,
+default4 workers,120-second socket timeout and5 retries. All27 hints eventually
+passed the unchanged parser, with20 non-triggered decisions untouched. Three
+successful episodes were not requested again while one disconnected episode
+retried across a retained-batch wait; the whole fault-recovery test took190.468s.
+This is evidence of actual outage handling, **not** a claim of constant API
+latency, live-provider availability, semantic hint quality or a GPU/Ray RL run.
+
+The API body/parser and protocol-source SHA locks, frozen data, SDAR patch/loss
+locks, SFT/RL configuration and shared140 manifests are unchanged. The transport
+update does not silently migrate old source-bound run identities. See
+[`API_TROUBLESHOOTING.md`](API_TROUBLESHOOTING.md).
+
 The historical CPU/CI checks below refer to their stated pre-alignment release.
 For the final-ALFWorld GLM protocol alignment, install/runtime corrections and
 the boundary of new single-GPU fixtures, see `ALFWORLD_ALIGNMENT.md`.
