@@ -10,7 +10,9 @@
   a different goal generator and call it the same experiment.
 - Base revisions/files: `configs/model.lock.json`, downloaded from public
   Hugging Face, verified against pinned LFS SHA256 or Git blob identity.
-- Frozen data: `data/frozen_sft.zip`, byte hashes in `configs/data.json`.
+- Frozen data: active buy-v9 `data/frozen_sft.zip`, byte hashes in `configs/data.json`;
+  the same268 Buy targets and exact archive as the3B companion. Use a fresh
+  checkout/run rather than overwriting extracted old data or resuming old SFT.
 - Exact3B SFT1500 inference export: public release; all21 assets are locked in
   `configs/checkpoint1500.json`. Original7 FP32 shards, no quantization/dtype
   conversion. No resharding is needed for inference initialization.
@@ -96,7 +98,9 @@ The wrapper rejects a different Actor/config/validation/world-size identity and
 requires all4 native model/optimizer/extra-state rank shards plus dataloader state.
 Old single/two-rank optimizer states cannot resume this topology; inference-only
 model exports remain valid fresh initialization weights. Its default
-initialization is not “latest weights from another run.” Native latest2 retention
+initialization is not “latest weights from another run.” The method's fresh
+initialization must pass the complete local SFT1500 parent/recipe/data/model
+identity checks; old-database SFT weights are rejected. Native latest2 retention
 keeps final150 as one of the latest2. No cross-server backup agent is required.
 
 Keys are entered via environment, then written to an ignored owner-only600

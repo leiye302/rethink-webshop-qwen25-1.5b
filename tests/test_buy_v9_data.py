@@ -1,4 +1,4 @@
-"""Versioned purchase data; keep the algorithm and original default intact."""
+"""Active buy-v9 data; preserve the training recipe and reject stale rows."""
 from collections import Counter
 import hashlib
 import json
@@ -55,6 +55,13 @@ def test_buy_v9_uses_existing_extractor_and_real_training_validator(tmp_path,mon
     assert identity['generation_rows']==200
     assert all(sum(training[index]['route']=='good' for index in batch)==5 for batch in order)
     assert sorted(index for batch in order for index in batch)==list(range(12000))
+    # A self-consistent old extraction must not bypass the active data lock.
+    active=tmp_path/'configs/data.json'
+    selected=json.loads(active.read_text());selected['files']['train.jsonl']['sha256']='0'*64
+    active.write_text(json.dumps(selected))
+    with pytest.raises(ValueError,match='selected database'):
+        train.validate_dataset(tmp_path,config,core)
+    shutil.copyfile(VERSION/'data.json',active)
     # A second identical preparation is safe; a partially replaced archive is not.
     setup.data()
     content=tmp_path/'datasets/frozen_sft/train.jsonl'
@@ -65,8 +72,6 @@ def test_buy_v9_uses_existing_extractor_and_real_training_validator(tmp_path,mon
 
 def test_active_bundle_is_a_complete_matching_released_profile():
     active=json.loads((ROOT/'configs/data.json').read_text())
-    if active.get('dataset_revision')=='buy-v9':
-        assert active==json.loads((VERSION/'data.json').read_text())
-    else:
-        assert active['files']['train.jsonl']['sha256']=='db060c4703fa0b0fba767696d32597be6d2bc22d7e9067ca054c6b0776180888'
+    assert active['dataset_revision']=='buy-v9'
+    assert active==json.loads((VERSION/'data.json').read_text())
     assert hashlib.sha256((ROOT/'data/frozen_sft.zip').read_bytes()).hexdigest()==active['bundle_sha256']

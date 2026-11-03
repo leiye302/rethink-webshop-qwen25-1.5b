@@ -1,66 +1,59 @@
-# Purchase-supplement SFT database: buy-v9
+# Active 1.5B Stage1 data: buy-v9
 
-This is a separately versioned frozen database. The original default database,
-its existing descriptions, model resources and training/evaluation algorithms
-are not changed by this publication.
-
-## Contents
-
-`data/buy_v9/frozen_sft.zip` contains `train.jsonl`, `val.jsonl`,
-`generation_val200.jsonl` and the manifest consumed by the existing SFT loader.
-`data/buy_v9/data.json` locks the ZIP and each row file by SHA256 and byte count.
-No download from an author's machine, private server or data-generation service
-is required. Model/Java/WebShop dependencies remain those in the main README.
+The default recipe is **public Qwen2.5-1.5B base → buy-v9 Route-SFT1500 →
+GRPO+OPSD150**. Its active `data/frozen_sft.zip` and `configs/data.json` match
+the 3B companion's buy-v9 database byte-for-byte. All files are bundled here;
+another checkout, an author's machine or a private data server is not needed.
 
 | Partition | Good | Bad |
-| --- | ---: | ---: |
+|---|---:|---:|
 | Train | 7,500 | 4,500 |
 | SFT validation | 631 | 271 |
 | Free-generation diagnostic | 100 | 100 |
 
-The 12,000-row training set contains **268 Buy targets: 176 Good and 92 Bad**.
-This revision adds 87 natural Good Buy and 30 corrected Bad Buy targets to its
-preceding accepted library, replacing only equal numbers of same-route non-Buy
-rows. Good retains its original sampled action and has no full-score gate.
-The 30 added corrective targets passed exact-current-state native execution
-checks. These checks are not a claim of perfect semantic labels or a trained
-model's success/trigger rate. The validation and generation files are unchanged.
+The training set contains **268 Buy targets: 176 Good and 92 Bad**. The accepted
+revision adds87 natural Good Buy and30 corrected Bad Buy rows relative to its
+preceding library, replacing equal numbers of same-route non-Buy examples.
+Good keeps its original sampled action, without a full-score gate. Bad targets
+the marker plus an accepted corrective action. The30 added corrective actions
+passed exact-current-state native execution checks. These data checks are not
+perfect-label or trained-model performance claims. Validation and generation
+files are unchanged. Original revision checks: `data/buy_v9/verification.json`.
 
-Train SHA256:
-`860a7b0ac73f91396089365947570c2f3052b2318d553ec1ac204964e78b9e59`.
+- ZIP SHA256: `34b25a42c2717bdee5d3a3bee8a955b4cffcdcc60ebbbfa3ca62a9c6693692f9`.
+- Train SHA256: `860a7b0ac73f91396089365947570c2f3052b2318d553ec1ac204964e78b9e59`.
 
-## Select v9 before preparation
+## Start a fresh data-bound experiment
 
-Use a **fresh checkout**, before any command extracts SFT data:
+Clone the current repository into a new directory and follow the main README.
+No manual ZIP/config copying is needed: buy-v9 is already the default.
+Preparation checks the ZIP and all members and refuses to overwrite a different
+extracted database. The training validator also compares the extracted manifest
+to the active data lock, preventing a self-consistent stale cache from being
+silently used after an update.
+
+Keep any old checkout, checkpoints and records intact. Do not overlay the new
+data on an old run, resume an old optimizer or relabel old weights as buy-v9.
+
+After the documented installation and preparation:
 
 ```bash
-git clone https://github.com/leiye302/rethink-webshop-qwen25-1.5b
-cd rethink-webshop-qwen25-1.5b
-cp data/buy_v9/frozen_sft.zip data/frozen_sft.zip
-cp data/buy_v9/data.json configs/data.json
+.venv-sft/bin/python -m rethink_webshop.audit_data
+CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_sft.sh
+# Configure the Teacher-only hint API as documented, then:
+CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_opsd.sh --allow-api-cost
 ```
 
-Then follow the existing installation, preparation and SFT commands in the main
-README. Once the documented dependencies are installed, the unchanged data
-preparation command is:
+Stage2 defaults to `runs/sft/checkpoint_001500/model`. Its Stage1 completion,
+parent, recipe, data and model identities are verified before training. Baseline
+still starts from the public1.5B base. Independent evaluation does not require
+an SFT training receipt.
 
-```bash
-export PYTHONPATH="$PWD/src:$PWD/.deps/sdar"
-python -m rethink_webshop.setup --data
-```
+## Unchanged scientific recipe
 
-Both copied files are required: copying only the ZIP must fail the old checksum
-guard. The loader refuses to overwrite a different previously extracted dataset.
-Do not overlay v9 onto an existing run or resume an optimizer trained on another
-database. An existing model's training provenance is not relabeled by this release.
-
-The scientific recipe stays one epoch, 1,500 updates, global batch eight with
-5 Good/3 Bad, LR 2e-6, suffix CE plus 0.1 full-vocabulary marker BCE, no SFT
-reference KL, masked H/R and an 8,192-token error-on-overlength limit. Formal
-evaluation remains the exact common140 manifest and decoding/scoring protocol.
-Stage 2's Actor marker routing, Teacher-only local hints and beta5 gate are
-unchanged. Selecting data does not launch a GPU job or an API request.
-
-`verification.json` records the data checks; `tests/test_buy_v9_data.py` exercises
-the original extractor and actual training-data validator with this bundle.
-Those CPU checks are not a new GPU training or performance result.
+SFT remains1500 updates,5 Good/3 Bad,global8,micro1,LR2e-6,masked H/R,
+suffix CE plus0.1 independent full-vocabulary marker BCE,no reference KL,
+max_length8192/error,and four DDP ranks. Stage2 remains150 updates,Actor-owned
+RETHINK routing,current-Actor no-gradient Teacher,Teacher-only local hints,
+SDAR beta5 and coefficient0.01. The shared140 task IDs,seeds,decoding and scores
+are unchanged. Selecting or checking data does not start training or API calls.

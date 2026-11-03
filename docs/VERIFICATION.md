@@ -1,5 +1,26 @@
 # Publication verification
 
+## Active buy-v9 and Windows Gloo checks (2026-11-03)
+
+The default archive/lock now match the3B buy-v9 database exactly:7500 Good,
+4500 Bad,and268 Buy targets (176 Good,92 Bad). The extracted-data validator
+rejects stale manifests; Stage2 verifies the complete local SFT1500 parent,
+configuration,selected-data identity and model file hashes. No scientific
+SFT/RL/hint/evaluation hyperparameters change in this update.
+
+The local Windows CPU suite passed **101 tests with no skips**, including four
+real Gloo/DDP processes,three production CE+BCE/AdamW updates compared with
+serial execution,and checkpoint/optimizer/scheduler/per-rank RNG resume.
+The previous blanket Windows skip was unnecessary on a Gloo-enabled build.
+Only builds genuinely lacking Gloo may skip that test. Both model-size
+repositories now also define a pinned torch2.8 Windows CI job which requires
+Gloo and executes the real four-process test. Linux CI remains in place.
+
+The local interpreter used a Gloo-enabled torch2.11 development build; the
+separate CI job checks the pinned torch2.8 build. This CPU test does not make
+Windows a supported CUDA training platform or establish A100 memory/performance.
+Earlier skipped-test counts below are historical,not the current local result.
+
 ## API resilience checks (2026-11-02)
 
 Both model-size trees passed **86 CPU tests with one Windows-only platform skip**,

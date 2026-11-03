@@ -2,9 +2,9 @@
 
 > Shared cross-method evaluation: [exact common140 tasks and unchanged sampling](docs/SHARED_EVALUATION140.md).
 
-> Additional SFT database: [purchase-supplement buy-v9 and selection commands](docs/DATA_BUY_V9.md).
-> It is versioned separately; select it before data preparation. The original
-> default database, existing descriptions and model resources below are preserved.
+> Default SFT database: [buy-v9 with 268 Buy targets](docs/DATA_BUY_V9.md),
+> identical to the 3B companion. Start a fresh checkout/run; do not reuse an
+> old extracted database or an SFT checkpoint trained on the previous database.
 
 
 An independently runnable **base → Route-SFT → GRPO+OPSD** recipe.
@@ -31,7 +31,7 @@ to obtain the supplied SFT dataset. Stage2 hint usage requires your own provider
 | Hints | Static public skills everywhere; extra local hint only when Actor generates marker |
 | Teacher | Current Actor no-gradient scoring view; Student never sees hints |
 | WebShop | Default1000 products/synthetic goals, history2, max15 actions,4096/512 tokens |
-| Monitoring | Same fixed128 reserved goals, validation every10, checkpoints every20/final150/latest2 |
+| Monitoring | Same shared140 reserved goals, validation every10, checkpoints every20/final150/latest2 |
 
 The source trajectories were collected with3B; using them for1.5B is intentional
 shared-data adaptation, not claimed1.5B on-policy collection.
@@ -86,7 +86,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_sft.sh
 The script first checks sampler/tokenization, native AdamW numerical parity and
 2 disposable real-model updates, then reloads the original base for formal SFT.
 It saves complete resumable checkpoints750/1500, validation loss,200 truly free
-generations and the fixed128 native episodes. The first supervised token is
+generations and the shared140 native episodes. The first supervised token is
 directly `<RETHINK>` or `<action>`; H/R targets are masked, natural separator
 and joint tokenization must match. No merged `><` boundary is silently accepted.
 
@@ -107,7 +107,9 @@ export HINT_API_KEY
 CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/train_opsd.sh --allow-api-cost
 ```
 
-Default Actor is **`runs/sft/checkpoint_001500/model`**. Configure your API provider
+Default Actor is **`runs/sft/checkpoint_001500/model`**. The launcher verifies
+completed Stage1 updates, parent, recipe, selected-data hashes and model files;
+old-database SFT weights are not accepted as this new run. Configure your API provider
 and key; the model is fixed to final-ALFWorld `glm-5.3-flash`. One episode request
 groups Actor-triggered steps; the API does not judge routes. Hints only augment
 Teacher context. Student responses, actions, rewards, GRPO participation and

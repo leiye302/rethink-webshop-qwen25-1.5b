@@ -3,6 +3,9 @@
 `frozen_sft.zip` is intentionally included (about9.8MB compressed). It contains
 the exact current training12000 rows, validation902, fixed-generation200 and a
 public manifest, not optimizer states or unfiltered private provenance logs.
+The default revision is buy-v9, including268 Buy targets (176 Good,92 Bad).
+Its active archive and data lock match the 3B companion byte-for-byte; no
+manual profile copying is needed. See [revision and fresh-run rules](../docs/DATA_BUY_V9.md).
 Both model-size repositories contain identical bytes; no paid reannotation is
 needed to reproduce SFT. `setup --data` verifies ZIP SHA before extraction and
 each row-file SHA afterward, and refuses to replace different existing files.
