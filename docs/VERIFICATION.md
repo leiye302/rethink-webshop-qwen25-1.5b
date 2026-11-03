@@ -13,11 +13,20 @@ real Gloo/DDP processes,three production CE+BCE/AdamW updates compared with
 serial execution,and checkpoint/optimizer/scheduler/per-rank RNG resume.
 The previous blanket Windows skip was unnecessary on a Gloo-enabled build.
 Only builds genuinely lacking Gloo may skip that test. Both model-size
-repositories now also define a pinned torch2.8 Windows CI job which requires
+repositories now also define a pinned torch2.11 Windows CI job which requires
 Gloo and executes the real four-process test. Linux CI remains in place.
 
+The first additional Windows CI run with torch2.8 reproduced the upstream
+`makeDeviceForHostname(): unsupported gloo device` regression. The Gloo flag
+alone therefore does not prove that this old Windows build can initialize.
+See [the upstream issue](https://github.com/pytorch/pytorch/issues/150381)
+and [the fix](https://github.com/pytorch/pytorch/pull/170491). Only the extra
+Windows CPU CI job uses stable torch2.11.0; Linux CI and all formal training
+requirements retain torch2.8.0. No mocked process group or reduced assertion
+replaces the failing old-build test.
+
 The local interpreter used a Gloo-enabled torch2.11 development build; the
-separate CI job checks the pinned torch2.8 build. This CPU test does not make
+separate Windows CI job checks stable2.11.0. This CPU test does not make
 Windows a supported CUDA training platform or establish A100 memory/performance.
 Earlier skipped-test counts below are historical,not the current local result.
 
